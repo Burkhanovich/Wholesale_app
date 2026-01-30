@@ -1,0 +1,206 @@
+{% extends 'frontend/base.html' %}
+{% load image_tags %}
+
+{% block title %}Profil - Wholesale{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row g-4">
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar|fix_image:base_url }}" class="rounded-circle mb-3" alt="Avatar" style="width: 100px; height: 100px; object-fit: cover;">
+                    {% else %}
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3" style="width: 100px; height: 100px;">
+                        <span class="display-6">{{ profile.name|first|upper }}</span>
+                    </div>
+                    {% endif %}
+                    <h5 class="mb-1">{{ profile.name }}</h5>
+                    <p class="text-muted mb-0">{{ profile.phone }}</p>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'frontend:profile' %}" class="list-group-item list-group-item-action active">
+                        <i class="bi bi-person me-2"></i> Profil
+                    </a>
+                    <a href="{% url 'frontend:orders' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-bag me-2"></i> Buyurtmalarim
+                    </a>
+                    <a href="{% url 'frontend:wishlist' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-heart me-2"></i> Sevimlilar
+                    </a>
+                    <a href="{% url 'frontend:logout' %}" class="list-group-item list-group-item-action text-danger">
+                        <i class="bi bi-box-arrow-right me-2"></i> Chiqish
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Profile Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-person-gear"></i> Profil ma'lumotlari</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Ism</label>
+                                <input type="text" name="name" class="form-control" value="{{ profile.name }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefon</label>
+                                <input type="text" name="phone" class="form-control" value="{{ profile.phone }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Avatar</label>
+                                <input type="file" name="avatar" class="form-control" accept="image/*">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check"></i> Saqlash
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Saved Addresses -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Manzillarim</h5>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                        <i class="bi bi-plus"></i> Yangi manzil
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if locations %}
+                    <div class="row g-3">
+                        {% for loc in locations %}
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ loc.location|default:"Manzil" }}</h6>
+                                    <p class="card-text text-muted small mb-1">
+                                        {% if loc.floor %}Qavat: {{ loc.floor }}{% endif %}
+                                        {% if loc.apartment %} | Xonadon: {{ loc.apartment }}{% endif %}
+                                    </p>
+                                    <button class="btn btn-sm btn-outline-danger delete-location-btn" data-location-id="{{ loc.id }}">
+                                        <i class="bi bi-trash"></i> O'chirish
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">Hali manzil qo'shilmagan</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Location Modal -->
+<div class="modal fade" id="addLocationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yangi manzil qo'shish</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addLocationForm">
+                    <div class="mb-3">
+                        <label class="form-label">Manzil *</label>
+                        <input type="text" name="location" class="form-control" placeholder="Shahar, ko'cha, uy" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Qavat</label>
+                            <input type="text" name="floor" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Xonadon</label>
+                            <input type="text" name="apartment" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-6">
+                            <label class="form-label">Latitude</label>
+                            <input type="text" name="latitude" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Longitude</label>
+                            <input type="text" name="longitude" class="form-control">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                <button type="button" class="btn btn-primary" id="saveLocationBtn">Saqlash</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add location
+    document.getElementById('saveLocationBtn').addEventListener('click', function() {
+        const form = document.getElementById('addLocationForm');
+        const formData = new FormData(form);
+
+        fetch('{% url "frontend:add_location" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.error) {
+                showToast('Manzil qo\'shildi', 'success');
+                location.reload();
+            } else {
+                showToast(data.message, 'danger');
+            }
+        });
+    });
+
+    // Delete location
+    document.querySelectorAll('.delete-location-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (!confirm('Manzilni o\'chirmoqchimisiz?')) return;
+
+            const locationId = this.dataset.locationId;
+            fetch(`/account/location/delete/${locationId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.error) {
+                    showToast('Manzil o\'chirildi', 'success');
+                    location.reload();
+                } else {
+                    showToast(data.message, 'danger');
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
