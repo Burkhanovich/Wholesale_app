@@ -60,13 +60,9 @@
             <div class="col-6 col-md-4 col-lg-3">
                 <a href="{% url 'frontend:category' category.id %}" class="text-decoration-none">
                     <div class="card h-100 category-card border-0 shadow-sm">
-                        {% if category.image %}
-                        <img src="{{ category.image|fix_image:base_url }}" class="card-img-top" alt="{{ category.name_uz }}" style="height: 150px; object-fit: cover;">
-                        {% else %}
-                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
-                            <i class="bi bi-grid-3x3-gap fs-1 text-muted"></i>
+                        <div class="card-img-top d-flex align-items-center justify-content-center" style="height: 150px; background: linear-gradient(135deg, {% if category.name_en == 'Electronics' %}#667eea 0%, #764ba2{% elif category.name_en == 'Clothing' %}#f093fb 0%, #f5576c{% elif category.name_en == 'Food' %}#4facfe 0%, #00f2fe{% elif category.name_en == 'Home' %}#43e97b 0%, #38f9d7{% elif category.name_en == 'Sports' %}#fa709a 0%, #fee140{% else %}#a8edea 0%, #fed6e3{% endif %} 100%);">
+                            <i class="bi {% if category.name_en == 'Electronics' %}bi-cpu{% elif category.name_en == 'Clothing' %}bi-bag{% elif category.name_en == 'Food' %}bi-basket3{% elif category.name_en == 'Home' %}bi-house-heart{% elif category.name_en == 'Sports' %}bi-trophy{% else %}bi-grid-3x3-gap{% endif %}" style="font-size: 3.5rem; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.2);"></i>
                         </div>
-                        {% endif %}
                         <div class="card-body text-center">
                             <h6 class="card-title text-dark mb-0">{{ category.name_uz|default:category.name_en }}</h6>
                         </div>

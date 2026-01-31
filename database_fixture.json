@@ -1189,11 +1189,11 @@
   "fields": {
     "name": "Elektronika",
     "name_en": "Electronics",
-    "name_ru": "???????????",
+    "name_ru": "Электроника",
     "name_uz": "Elektronika",
-    "name_ko": null,
+    "name_ko": "전자제품",
     "parent": null,
-    "image": "categories/Screenshot_from_2024-09-28_12-10-10.png",
+    "image": "",
     "created_date": "2026-01-29"
   }
 },
@@ -1203,11 +1203,11 @@
   "fields": {
     "name": "Kiyim-kechak",
     "name_en": "Clothing",
-    "name_ru": "??????",
+    "name_ru": "Одежда",
     "name_uz": "Kiyim-kechak",
-    "name_ko": null,
+    "name_ko": "의류",
     "parent": null,
-    "image": "categories/Screenshot_from_2024-09-29_16-38-25.png",
+    "image": "",
     "created_date": "2026-01-29"
   }
 },
@@ -1217,11 +1217,11 @@
   "fields": {
     "name": "Oziq-ovqat",
     "name_en": "Food",
-    "name_ru": "????????",
+    "name_ru": "Продукты",
     "name_uz": "Oziq-ovqat",
-    "name_ko": null,
+    "name_ko": "식품",
     "parent": null,
-    "image": "categories/Screenshot_from_2024-09-29_16-40-26.png",
+    "image": "",
     "created_date": "2026-01-29"
   }
 },
@@ -1231,11 +1231,11 @@
   "fields": {
     "name": "Uy-ro'zg'or",
     "name_en": "Home",
-    "name_ru": "?????? ??? ????",
+    "name_ru": "Товары для дома",
     "name_uz": "Uy-ro'zg'or",
-    "name_ko": null,
+    "name_ko": "홈용품",
     "parent": null,
-    "image": "categories/Screenshot_from_2024-10-04_19-56-40.png",
+    "image": "",
     "created_date": "2026-01-29"
   }
 },
@@ -1245,11 +1245,11 @@
   "fields": {
     "name": "Sport",
     "name_en": "Sports",
-    "name_ru": "?????",
+    "name_ru": "Спорт",
     "name_uz": "Sport",
-    "name_ko": null,
+    "name_ko": "스포츠",
     "parent": null,
-    "image": "categories/Screenshot_from_2024-10-07_13-20-46.png",
+    "image": "",
     "created_date": "2026-01-29"
   }
 },

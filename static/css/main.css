@@ -321,20 +321,31 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: var(--border-radius);
     overflow: hidden;
     transition: var(--transition);
+    background: var(--bg-primary);
 }
 
 .category-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-lg);
+}
+
+.category-card:hover .card-img-top i {
+    transform: scale(1.15);
 }
 
 .category-card .card-img-top {
     height: 140px;
     object-fit: cover;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.category-card .card-img-top i {
+    transition: var(--transition);
 }
 
 .category-card .card-body {
     padding: 1rem;
+    background: var(--bg-primary);
 }
 
 .category-card .card-title {
