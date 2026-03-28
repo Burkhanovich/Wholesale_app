@@ -26,7 +26,7 @@ class PromoSerializer(serializers.Serializer):
         if promo.last().is_expired:
             raise ValidationError({'detail': "Promo is expired"})
         if user in promo.last().members.all():
-            return ValidationError({'detail': "Promo is already used"})
+            raise ValidationError({'detail': "Promo is already used"})
         return attrs
 
 
@@ -52,6 +52,7 @@ class PromoPostSerializer(serializers.ModelSerializer):
 
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
+    get_amount = serializers.FloatField(read_only=True)
 
     class Meta:
         model = CartItem
@@ -61,10 +62,6 @@ class CartItemSerializer(serializers.ModelSerializer):
             'product': {'required': True},
             'quantity': {'required': True},
         }
-
-        @extend_schema_field(serializers.FloatField())
-        def get_amount(self, obj) -> float:
-            return float(obj.product.price) * obj.quantity
 
 
 class CartItemPostSerializer(serializers.ModelSerializer):
@@ -128,14 +125,21 @@ class OrderPostSerializer(serializers.ModelSerializer):
                 raise ValidationError("Joylashuv topilmadi. Iltimos, joylashuv qo'shing.")
 
         attrs['location'] = location
+
+        # Promo kodni tekshirish
         promo_code = attrs.get('promo', None)
         if promo_code:
             try:
                 promo = Promo.objects.get(name=promo_code)
                 if promo.is_expired:
                     raise ValidationError("Promo kodning muddati o'tgan.")
-                total_amount = sum(item.get_amount for item in attrs['items'])
-                if total_amount < promo.min_price:
+
+                # CartItem larni olish va umumiy summani hisoblash
+                items_ids = attrs.get('items', [])
+                cart_items = CartItem.objects.filter(id__in=items_ids, user=user)
+                total_amount = sum(item.get_amount for item in cart_items)
+
+                if total_amount < float(promo.min_price):
                     raise ValidationError(
                         f"Promo kodni ishlatish uchun buyurtma miqdori {promo.min_price} dan kam bo'lmasligi kerak.")
                 if promo.members.filter(id=user.id).exists():
@@ -163,9 +167,12 @@ class OrderPostSerializer(serializers.ModelSerializer):
                 'id': item.id,
                 'product_id': item.product.id,
                 'product_name': item.product.name,
-                'product_image': item.product.images.first().image.url if item.product.images.exists() else None,  # Birinchi rasm
+                'product_image': item.product.images.first().image.url if item.product.images.exists() else None,
                 'quantity': item.quantity,
-                'price': str(item.get_amount),
+                'original_price': str(item.product.price),  # Asl narx
+                'discount_percent': item.product.discount,  # Chegirma foizi
+                'discounted_price': str(item.product.discounted_price),  # Chegirmadan keyingi narx
+                'price': str(item.get_amount),  # Umumiy summa (chegirma * miqdor)
             } for item in cart_items
         ]
         order.save()
@@ -191,8 +198,10 @@ class OrderPostSerializer(serializers.ModelSerializer):
                     'product_id': item.product.id,
                     'product_name': item.product.name,
                     'product_image': item.product.images.first().image.url if item.product.images.exists() else None,
-                    # Birinchi rasm
                     'quantity': item.quantity,
+                    'original_price': str(item.product.price),
+                    'discount_percent': item.product.discount,
+                    'discounted_price': str(item.product.discounted_price),
                     'price': str(item.get_amount),
                 } for item in cart_items
             ]

@@ -30,9 +30,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # DRF API Endpoints
-    path('account/', include('apps.account.urls')),
-    path('product/', include('apps.product.urls')),
-    path('order/', include('apps.order.urls')),
+    path('api/account/', include('apps.account.urls')),
+    path('api/product/', include('apps.product.urls')),
+    path('api/order/', include('apps.order.urls')),
 
     # Frontend (MVT)
     path('', include('frontend.urls', namespace='frontend')),

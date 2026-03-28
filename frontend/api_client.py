@@ -54,14 +54,14 @@ class APIClient:
                     self._fix_image_urls(item)
         return data
 
-    def _get_headers(self):
+    def _get_headers(self, include_auth=True):
         """Request headerlarini tayyorlash"""
         headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Accept-Language': self.language,
         }
-        if self.token:
+        if include_auth and self.token:
             headers['Authorization'] = f'Bearer {self.token}'
         return headers
 
@@ -80,6 +80,9 @@ class APIClient:
         try:
             url = f"{self.base_url}{endpoint}"
             response = requests.get(url, headers=self._get_headers(), params=params, timeout=10)
+            # Agar token eskirgan bo'lsa, public endpointlar uchun authsiz qayta urinib ko'ramiz.
+            if response.status_code == 401 and self.token:
+                response = requests.get(url, headers=self._get_headers(include_auth=False), params=params, timeout=10)
             return self._handle_response(response)
         except requests.exceptions.RequestException as e:
             return {'error': True, 'message': str(e), 'status_code': 500}
@@ -159,11 +162,11 @@ class APIClient:
     # === Account API ===
     def login(self, phone, password):
         """Foydalanuvchi login"""
-        return self.post('/account/login/', {'phone': phone, 'password': password})
+        return self.post('/api/account/login/', {'phone': phone, 'password': password})
 
     def register(self, name, phone, password1, password2):
         """Ro'yxatdan o'tish"""
-        return self.post('/account/register/', {
+        return self.post('/api/account/register/', {
             'name': name,
             'phone': phone,
             'password1': password1,
@@ -172,29 +175,29 @@ class APIClient:
 
     def get_profile(self):
         """Profil olish"""
-        return self.get('/account/profile/')
+        return self.get('/api/account/profile/')
 
     def update_profile(self, data, avatar=None):
         """Profil yangilash"""
         if avatar:
-            return self.put('/account/profile/', data, files={'avatar': avatar})
-        return self.patch('/account/profile/', data)
+            return self.put('/api/account/profile/', data, files={'avatar': avatar})
+        return self.patch('/api/account/profile/', data)
 
     def get_locations(self):
         """User manzillari"""
-        return self.get('/account/location/')
+        return self.get('/api/account/location/')
 
     def add_location(self, data):
         """Manzil qo'shish"""
-        return self.post('/account/location/', data)
+        return self.post('/api/account/location/', data)
 
     def delete_location(self, location_id):
         """Manzil o'chirish"""
-        return self.delete(f'/account/location/{location_id}/')
+        return self.delete(f'/api/account/location/{location_id}/')
 
     def get_banners(self):
         """Bannerlar"""
-        return self.get('/account/banners/')
+        return self.get('/api/account/banners/')
 
     # === Product API ===
     def get_categories(self, search=None):
@@ -202,11 +205,11 @@ class APIClient:
         params = {}
         if search:
             params['search'] = search
-        return self.get('/product/categories/', params)
+        return self.get('/api/product/categories/', params)
 
     def get_category(self, category_id):
         """Kategoriya detallari"""
-        return self.get(f'/product/categories/{category_id}/')
+        return self.get(f'/api/product/categories/{category_id}/')
 
     def get_products(self, search=None, category=None, ordering=None, limit=12, offset=0):
         """Mahsulotlar ro'yxati"""
@@ -217,61 +220,61 @@ class APIClient:
             params['category'] = category
         if ordering:
             params['ordering'] = ordering
-        return self.get('/product/', params)
+        return self.get('/api/product/', params)
 
     def get_product(self, product_id):
         """Mahsulot detallari"""
-        return self.get(f'/product/{product_id}/')
+        return self.get(f'/api/product/{product_id}/')
 
     def get_best_selling(self, limit=12, offset=0):
         """Eng ko'p sotilganlar"""
-        return self.get('/product/best-selling', {'limit': limit, 'offset': offset})
+        return self.get('/api/product/best-selling/', {'limit': limit, 'offset': offset})
 
     def get_newly_added(self, limit=12, offset=0):
         """Yangi mahsulotlar"""
-        return self.get('/product/newly-added', {'limit': limit, 'offset': offset})
+        return self.get('/api/product/newly-added/', {'limit': limit, 'offset': offset})
 
     def get_wishlist(self):
         """Wishlist"""
-        return self.get('/product/wishlists/')
+        return self.get('/api/product/wishlists/')
 
     def add_to_wishlist(self, product_id):
         """Wishlistga qo'shish"""
-        return self.post('/product/wishlists/', {'product': product_id})
+        return self.post('/api/product/wishlists/', {'product': product_id})
 
     def remove_from_wishlist(self, wishlist_id):
         """Wishlistdan o'chirish"""
-        return self.delete(f'/product/wishlists/{wishlist_id}/')
+        return self.delete(f'/api/product/wishlists/{wishlist_id}/')
 
     # === Cart API ===
     def get_cart(self):
         """Savatcha"""
-        return self.get('/order/cart-items/')
+        return self.get('/api/order/cart-items/')
 
     def add_to_cart(self, product_id, quantity=1):
         """Savatchaga qo'shish"""
-        return self.post('/order/cart-items/', {'product': product_id, 'quantity': quantity})
+        return self.post('/api/order/cart-items/', {'product': product_id, 'quantity': quantity})
 
     def update_cart_item(self, item_id, quantity):
         """Savatcha itemni yangilash"""
-        return self.patch(f'/order/cart-items/{item_id}/', {'quantity': quantity})
+        return self.patch(f'/api/order/cart-items/{item_id}/', {'quantity': quantity})
 
     def remove_from_cart(self, item_id):
         """Savatchadan o'chirish"""
-        return self.delete(f'/order/cart-items/{item_id}/')
+        return self.delete(f'/api/order/cart-items/{item_id}/')
 
     def clear_cart(self):
         """Savatchani tozalash"""
-        return self.delete('/order/cart-items/clear-cart/')
+        return self.delete('/api/order/cart-items/clear-cart/')
 
     # === Order API ===
     def get_orders(self, limit=20, offset=0):
         """Buyurtmalar"""
-        return self.get('/order/', {'limit': limit, 'offset': offset})
+        return self.get('/api/order/', {'limit': limit, 'offset': offset})
 
     def get_order(self, order_id):
         """Buyurtma detallari"""
-        return self.get(f'/order/{order_id}/')
+        return self.get(f'/api/order/{order_id}/')
 
     def create_order(self, items, location_id, promo=None, file=None):
         """Buyurtma yaratish"""
@@ -282,9 +285,23 @@ class APIClient:
         if promo:
             data['promo'] = promo
         if file:
-            return self.post('/order/', data, files={'file': file})
-        return self.post('/order/', data)
+            return self.post('/api/order/', data, files={'file': file})
+        return self.post('/api/order/', data)
 
     def check_promo(self, promo_code):
         """Promo tekshirish"""
-        return self.post('/order/check_promo/', {'name': promo_code})
+        return self.post('/api/order/check_promo/', {'name': promo_code})
+
+    def change_password(self, old_password, new_password, new_password_confirm):
+        """Parolni o'zgartirish"""
+        return self.post('/api/account/profile/password/change/', {
+            'old_password': old_password,
+            'new_password': new_password,
+            'new_password_confirm': new_password_confirm
+        })
+
+    def delete_account(self, password):
+        """Hisobni o'chirish"""
+        return self.post('/api/account/profile/delete/', {
+            'password': password
+        })

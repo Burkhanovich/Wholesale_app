@@ -99,7 +99,7 @@ class RankAdmin(admin.ModelAdmin):
 
 
 @admin.register(CommentImage)
-class CommentAdmin(admin.ModelAdmin):
+class CommentImageAdmin(admin.ModelAdmin):
     list_display = ('id', 'image')
 
 # @admin.register(Comment)

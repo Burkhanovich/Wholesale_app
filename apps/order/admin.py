@@ -18,21 +18,22 @@ class PromoAdmin(admin.ModelAdmin):
     list_filter = ('is_expired',)
     filter_horizontal = ('members',)
     readonly_fields = ('created_date',)
-    search_fields = ('user__username', 'user__full_name')
+    search_fields = ('user__phone', 'user__name')
 
 
 @admin.register(CartItem)
 class CartItemAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'product', 'quantity', 'get_amount', 'created_date')
-    search_fields = ('product__name', 'user__username', 'user__full_name')
+    search_fields = ('product__name', 'user__phone', 'user__name')
     date_hierarchy = 'created_date'
     readonly_fields = ('created_date',)
 
-    @admin.register(Courier)
-    class CourierAdmin(admin.ModelAdmin):
-        list_display = ('user', 'phone', 'group')
-        search_fields = ('user', 'phone', 'group__name')
-        list_filter = ('group',)
+
+@admin.register(Courier)
+class CourierAdmin(admin.ModelAdmin):
+    list_display = ('user', 'phone', 'group')
+    search_fields = ('user__name', 'user__phone', 'phone', 'group__name')
+    list_filter = ('group',)
 
 
 @admin.register(Order)
@@ -167,34 +168,6 @@ class OrderAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         with transaction.atomic():
             super().save_model(request, obj, form, change)
-            obj.refresh_from_db()
-            items = obj.items.all()
-            for item in items:
-                product = item.product
-                if item.quantity > product.quantity:
-                    raise ValidationError(
-                        f"{product.name} mahsulotidan yetarli miqdorda mavjud emas. "
-                        f"Qoldiq: {product.quantity} ta."
-                    )
-                product.quantity -= item.quantity
-                product.save()
-
-    formatted_items_data.short_description = "Mahsulotlar data"
-
-    def save_model(self, request, obj, form, change):
-        with transaction.atomic():
-            super().save_model(request, obj, form, change)
-            obj.refresh_from_db()
-            items = obj.items.all()
-            for item in items:
-                product = item.product
-                if item.quantity > product.quantity:
-                    raise ValidationError(
-                        f"{product.name} mahsulotidan yetarli miqdorda mavjud emas. "
-                        f"Qoldiq: {product.quantity} ta."
-                    )
-                product.quantity -= item.quantity
-                product.save()
 
     def pdf_receipt_link(self, obj):
         if obj.status == 'delivered':
@@ -214,7 +187,7 @@ class OrderAdmin(admin.ModelAdmin):
     def download_pdf(self, request, order_id):
         order = self.get_object(request, order_id)
         if order and order.status == 'delivered':
-            response = HttpResponse(order.generate_pdf_receipt, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="order_{order_id}_receipt.pdf"'
-            return response
+            pdf_response = order.generate_pdf_receipt()
+            if pdf_response:
+                return pdf_response
         return HttpResponse("Chek mavjud emas", status=404)

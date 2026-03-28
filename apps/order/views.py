@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from apps.order.models import (
     Order,
     CartItem,
@@ -74,29 +74,47 @@ class OrderViewSet(CreateViewSetMixin, viewsets.ModelViewSet):
     model = Order
     serializer_post_class = OrderPostSerializer
     queryset = Order.objects.all()
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
     permission_classes = (IsAuthenticated,)
 
     def create(self, request, *args, **kwargs):
         items_raw = request.data.get("items", [])
-        if isinstance(items_raw, list):
-            items_raw = items_raw[0] if items_raw else ""
+        
+        # Items ni parse qilish (string yoki list bo'lishi mumkin)
+        if isinstance(items_raw, str):
+            # String format: "1,2,3"
+            try:
+                items_list = [int(i) for i in items_raw.split(",") if i.strip().isdigit()]
+            except ValueError:
+                raise ValidationError("Noto'g'ri item ID berilgan.")
+        elif isinstance(items_raw, list):
+            # List format: [1,2,3] yoki ["1","2","3"]
+            try:
+                items_list = [int(i) for i in items_raw]
+            except (ValueError, TypeError):
+                raise ValidationError("Noto'g'ri item ID berilgan.")
+        else:
+            raise ValidationError("Items parametri string yoki list bo'lishi kerak.")
 
-        try:
-            items_list = [int(i) for i in items_raw.split(",") if i.strip().isdigit()]
-        except ValueError:
-            raise ValidationError("Noto‘g‘ri item ID berilgan.")
-
-        data = request.data.copy()
-        data.setlist("items", [str(i) for i in items_list])
-        data["user"] = request.user.id
+        # Data ni dict sifatida tayyorlash
+        promo_value = request.data.get('promo')
+        data = {
+            'items': items_list,
+            'user': request.user.id,
+            'location': request.data.get('location'),
+            'promo': promo_value if promo_value else None,
+        }
+        
+        # File mavjud bo'lsa qo'shish
+        if 'file' in request.data:
+            data['file'] = request.data.get('file')
 
         serializer = self.get_serializer(data=data, context={'request': request})
         if serializer.is_valid():
             order = serializer.save()
 
             # Mahsulot miqdorini kamaytirish
-            cart_items = CartItem.objects.filter(id__in=items_list)
+            cart_items = CartItem.objects.filter(id__in=items_list, user=request.user)
             if cart_items.count() != len(items_list):
                 order.delete()
                 raise ValidationError("Ba'zi itemlar mavjud emas yoki noto‘g‘ri ID berilgan.")
@@ -134,7 +152,7 @@ class OrderViewSet(CreateViewSetMixin, viewsets.ModelViewSet):
         self.perform_destroy(instance)
         return Response(
             {"detail": "Buyurtma muvaffaqiyatli o'chirildi."},
-            status=status.HTTP_201_CREATED
+            status=status.HTTP_204_NO_CONTENT
         )
 
     def perform_destroy(self, instance):
@@ -142,36 +160,36 @@ class OrderViewSet(CreateViewSetMixin, viewsets.ModelViewSet):
 
 
 class OrderPDFView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, order_id):
         try:
-            # Orderni topish
             order = Order.objects.get(id=order_id)
 
-            # Agar order yetkazilgan bo'lsa, PDFni generate qilamiz
-            if order.is_delivered:
-                pdf_response = order.generate_pdf_receipt  # Bu yerda modelning metodini chaqiramiz
-                return pdf_response  # PDFni qaytaramiz
+            if order.status == 'delivered':
+                pdf_response = order.generate_pdf_receipt()
+                if pdf_response:
+                    return pdf_response
+                return Response({"detail": "PDF yaratishda xatolik."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            # Agar order hali yetkazilmagan bo'lsa, 404 yoki mos javob qaytarish
-            return Response({"detail": "Order not delivered yet."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Buyurtma hali yetkazilmagan."}, status=status.HTTP_400_BAD_REQUEST)
 
         except Order.DoesNotExist:
-            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Buyurtma topilmadi."}, status=status.HTTP_404_NOT_FOUND)
 
 
 class MarkOrderAsDelivered(APIView):
-    permission_classes = [IsAuthenticated]  # Foydalanuvchi autentifikatsiyalangan bo'lishi kerak
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, pk=None):
         try:
-            # Orderni topish (faqat o'z foydalanuvchisining ordersini topish)
             order = Order.objects.get(pk=pk, user=request.user)
-            order.is_delivered = True
+            order.status = 'delivered'
             order.save()
-            # Endi PDFni generate qilamiz
-            pdf_response = order.generate_pdf_receipt  # Bu yerda modelning metodini chaqiramiz
 
-            # PDFni qaytarish
-            return pdf_response
+            pdf_response = order.generate_pdf_receipt()
+            if pdf_response:
+                return pdf_response
+            return Response({"detail": "Buyurtma yetkazildi deb belgilandi."}, status=status.HTTP_200_OK)
         except Order.DoesNotExist:
-            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Buyurtma topilmadi'}, status=status.HTTP_404_NOT_FOUND)

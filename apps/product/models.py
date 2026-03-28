@@ -62,8 +62,22 @@ class Product(models.Model):
         return self.likes.count()
 
     @property
+    def discounted_price(self) -> float:
+        """Chegirmadan keyingi narx"""
+        if self.discount and self.discount > 0:
+            return round(float(self.price) * (100 - self.discount) / 100, 2)
+        return float(self.price)
+
+    @property
+    def discount_amount(self) -> float:
+        """Chegirma miqdori (pul)"""
+        if self.discount and self.discount > 0:
+            return round(float(self.price) * self.discount / 100, 2)
+        return 0.0
+
+    @property
     def is_available(self) -> bool:
-        return self.get_quantity > 0
+        return self.quantity > 0
 
     @property
     def has_wishlist(self) -> bool:
@@ -129,7 +143,7 @@ class Comment(models.Model):
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     comment = models.TextField()
-    comment_image_url = models.CharField()
+    comment_image_url = models.CharField(max_length=500, blank=True, default='')
     top_level_comment_id = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
     created_date = models.DateField(auto_now_add=True)
 

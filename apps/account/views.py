@@ -1,32 +1,32 @@
-from django.shortcuts import get_object_or_404
-from rest_framework import generics, status, permissions, viewsets
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import generics, status, viewsets, permissions
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from .serializers import SuperUserCreateSerializer, UserSerializer, UserUpdateSerializer, AdviceSerializer, \
-    BannerSerializer, UserDeleteSerializer
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-)
+from rest_framework_simplejwt.views import TokenObtainPairView
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
-# from .tasks import ecommerce_send_email
+
 from apps.account.models import User, UserToken, Banner
 from apps.account.serializers import (
     UserRegisterSerializer,
     UserProfileSerializer,
     CustomTokenObtainPairSerializer,
+    SuperUserCreateSerializer,
+    UserSerializer,
+    UserUpdateSerializer,
+    UserDeleteSerializer,
+    UserProfileFullSerializer,
+    PasswordChangeSerializer,
     NewBlockSerializer,
     AdviceSerializer,
     CallSerializer,
-    CartaSerializer
+    BannerSerializer,
+    CartaSerializer,
+    UserLocationSerializer,
 )
-from .permissions import IsOwnerOrReadOnly, IsAdminOrReadOnly
+from .permissions import IsOwnerOrReadOnly
 from .models import UserLocation, NewBlock, Advice, Call, Carta
-from .serializers import UserLocationSerializer
-from ..product.permissions import IsAdminOrReadOnly
+from apps.product.permissions import IsAdminOrReadOnly
 
 
 class UserLocationUpdateAPIView(viewsets.ModelViewSet):
@@ -90,15 +90,15 @@ class SuperUserCreateView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = SuperUserCreateSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            return Response({"detail": "Superuser  create success full"}, status=status.HTTP_201_CREATED)
+            serializer.save()
+            return Response({"detail": "Superuser muvaffaqiyatli yaratildi"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserProfileAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
-    serializer_class = UserSerializer
+    serializer_class = UserProfileFullSerializer
 
     def get(self, request, *args, **kwargs):
         user = request.user
@@ -107,14 +107,15 @@ class UserProfileAPIView(APIView):
 
     @extend_schema(
         request=UserUpdateSerializer,
-        responses=UserSerializer
+        responses=UserProfileFullSerializer
     )
     def put(self, request, *args, **kwargs):
         user = request.user
         serializer = UserUpdateSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Yangilangan to'liq profil ma'lumotlarini qaytarish
+            return Response(UserProfileFullSerializer(user).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, *args, **kwargs):
@@ -122,7 +123,8 @@ class UserProfileAPIView(APIView):
         serializer = UserUpdateSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Yangilangan to'liq profil ma'lumotlarini qaytarish
+            return Response(UserProfileFullSerializer(user).data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -138,6 +140,22 @@ class UserDeleteView(APIView):
         if serializer.is_valid():
             request.user.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordChangeView(APIView):
+    """Parolni o'zgartirish"""
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=PasswordChangeSerializer,
+        responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}}
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Parol muvaffaqiyatli o'zgartirildi"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -157,7 +175,7 @@ class NewBlockDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class AdviceViewSet(viewsets.ModelViewSet):
     queryset = Advice.objects.all()
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [permissions.AllowAny]  # Public endpoint
     serializer_class = AdviceSerializer
 
     def destroy(self, request, *args, **kwargs):
@@ -168,7 +186,7 @@ class AdviceViewSet(viewsets.ModelViewSet):
 
 class CallViewSet(viewsets.ModelViewSet):
     queryset = Call.objects.all()
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [permissions.AllowAny]  # Public endpoint
     serializer_class = CallSerializer
 
     def destroy(self, request, *args, **kwargs):
@@ -180,7 +198,7 @@ class CallViewSet(viewsets.ModelViewSet):
 class BannerViewSet(viewsets.ModelViewSet):
     queryset = Banner.objects.all()
     serializer_class = BannerSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [permissions.AllowAny]  # Public endpoint
     parser_classes = [MultiPartParser, FormParser]
 
     def destroy(self, request, *args, **kwargs):
@@ -192,4 +210,4 @@ class BannerViewSet(viewsets.ModelViewSet):
 class CartaViewSet(viewsets.ModelViewSet):
     queryset = Carta.objects.all()
     serializer_class = CartaSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [permissions.AllowAny]  # Public endpoint

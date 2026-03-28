@@ -1,6 +1,5 @@
 from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
-from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from .models import User
 
@@ -39,8 +38,7 @@ class UserChangeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['password'].help_text = '<a href="%s">change password</a>.' % reverse_lazy(
-            'admin:auth_user_password_change', args=[self.instance.id])
+        self.fields['password'].help_text = '<a href="../password/">change password</a>.'
 
     def clean_password(self):
         return self.initial['password']

@@ -3,6 +3,7 @@ Frontend URL Configuration
 """
 from django.urls import path
 from . import views
+from .views import ChangePasswordView, DeleteAccountView
 
 app_name = 'frontend'
 
@@ -40,4 +41,6 @@ urlpatterns = [
     path('account/wishlist/remove/<int:pk>/', views.WishlistRemoveView.as_view(), name='wishlist_remove'),
     path('account/location/add/', views.AddLocationView.as_view(), name='add_location'),
     path('account/location/delete/<int:pk>/', views.DeleteLocationView.as_view(), name='delete_location'),
+    path('account/password/', ChangePasswordView.as_view(), name='change_password'),
+    path('account/delete/', DeleteAccountView.as_view(), name='delete_account'),
 ]

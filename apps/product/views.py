@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, generics, status, permissions
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -35,21 +36,23 @@ from .permissions import (
     IsAdminOrReadOnly,
     IsAuthor,
 )
+from .filters import ProductFilter
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [permissions.AllowAny]  # Public endpoint
     filter_backends = (SearchFilter,)
-    search_fields = ['name']
+    search_fields = ['name', 'name_uz', 'name_ru', 'name_en', 'name_ko']
     parser_classes = (MultiPartParser, FormParser)
 
     def get_queryset(self):
         return Category.objects.filter(parent__isnull=True)
 
     def get_object(self):
-        queryset = self.queryset
+        # Retrieve uchun barcha kategoriyalardan izlash (parent ham, child ham)
+        queryset = Category.objects.all()
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         assert lookup_url_kwarg in self.kwargs, (
                 'Expected view %s to be called with a URL keyword argument '
@@ -71,7 +74,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [permissions.AllowAny]  # Public endpoint
     filter_backends = (SearchFilter,)
     search_fields = ['name']
 
@@ -87,11 +90,32 @@ class ProductViewSet(CreateViewSetMixin, viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
     serializer_class = ProductSerializer
     serializer_post_class = ProductPostSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [permissions.AllowAny]  # Public endpoint
     filter_backends = (SearchFilter, DjangoFilterBackend, OrderingFilter)
-    search_fields = ['name']
-    filterset_fields = ['category', ]
-    ordering_fields = ['views', 'id', 'sold_count']
+    filterset_class = ProductFilter
+    search_fields = ['name', 'name_uz', 'name_ru', 'name_en', 'name_ko',
+                     'description', 'description_uz', 'description_ru',
+                     'description_en', 'description_ko', 'category__name']
+    ordering_fields = ['views', 'id', 'sold_count', 'price', 'discount', 'created_date']
+    ordering = ['-created_date']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # Qo'shimcha qidiruv parametri
+        search_query = self.request.query_params.get('q', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(name__icontains=search_query) |
+                Q(name_uz__icontains=search_query) |
+                Q(name_ru__icontains=search_query) |
+                Q(name_en__icontains=search_query) |
+                Q(name_ko__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(category__name__icontains=search_query)
+            )
+
+        return queryset
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -103,7 +127,7 @@ class ProductImageViewSet(viewsets.ModelViewSet):
     queryset = ProductImage.objects.all()
     # parser_classes = (MultiPartParser, FormParser)<
     serializer_class = ProductImageSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [permissions.AllowAny]  # Public endpoint
 
     def get_serializer_context(self):
         pid = self.kwargs.get('pid')
@@ -120,12 +144,13 @@ class ProductImageViewSet(viewsets.ModelViewSet):
 class BestSellingProductsAPIView(generics.ListAPIView):
     queryset = Product.objects.order_by('-sold_count')  # Ko'p sotilganlarni kamayish tartibida /
     serializer_class = ProductSerializer
+    permission_classes = [permissions.AllowAny]  # Public endpoint
 
 
 class NewlyAddedProductsAPIView(generics.ListAPIView):
     queryset = Product.objects.order_by('-created_date')  # Yangi qo‘shilganlarni kamayish tartibida
     serializer_class = ProductSerializer
-
+    permission_classes = [permissions.AllowAny]  # Public endpoint
 
 # class TradeViewSet(CreateViewSetMixin, viewsets.ModelViewSet):
 #     queryset = Trade.objects.all()

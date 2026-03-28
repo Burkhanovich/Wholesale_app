@@ -30,6 +30,6 @@ router.register('', ProductViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('best-selling',BestSellingProductsAPIView.as_view(), name='best-selling-products'),
-    path('newly-added',NewlyAddedProductsAPIView.as_view(), name='best-selling-products')
+    path('best-selling/', BestSellingProductsAPIView.as_view(), name='best-selling-products'),
+    path('newly-added/', NewlyAddedProductsAPIView.as_view(), name='newly-added-products')
 ]

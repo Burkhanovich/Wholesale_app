@@ -35,7 +35,7 @@ class UserTokenAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'is_used', 'token', 'created_date')
     date_hierarchy = 'created_date'
     list_filter = ('is_used',)
-    search_fields = ('user__username', 'user_full_name', 'token')
+    search_fields = ('user__phone', 'user__name', 'token')
 
 
 admin.site.register(User, UserAdmin)
@@ -66,7 +66,7 @@ class AdviceAdmin(TranslationAdmin):
 
 
 @admin.register(Call)
-class AdviceAdmin(admin.ModelAdmin):
+class CallAdmin(admin.ModelAdmin):
     list_display = ('id', 'phone', 'telegram', 'instagram', 'tiktok', 'facebook')
     search_fields = ('phone',)
 

@@ -1,7 +1,5 @@
-from itertools import product
 from typing import List, Dict
 
-from django.template.context_processors import request
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from .models import (
@@ -66,29 +64,33 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     category = MiniCategorySerializer(read_only=True)
+    discounted_price = serializers.FloatField(read_only=True)
+    discount_amount = serializers.FloatField(read_only=True)
 
     # tags = TagSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
         fields = ['id', 'name_en', 'name_ru', 'name_uz', 'name_ko', 'description_en', 'description_ru',
-                  'description_uz', 'description_ko', 'category', 'price', 'quantity', 'worth', 'discount', 'views',
-                  'sold_count', 'images', 'average_rank', 'get_likes_count', 'is_available', 'modified_date',
-                  'created_date']
-        read_only_fields = ['views', 'is_available']
+                  'description_uz', 'description_ko', 'category', 'price', 'discount', 'discounted_price',
+                  'discount_amount', 'quantity', 'worth', 'views', 'sold_count', 'images', 'average_rank',
+                  'get_likes_count', 'is_available', 'modified_date', 'created_date']
+        read_only_fields = ['views', 'is_available', 'discounted_price', 'discount_amount']
 
 
 class MiniProductSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     category = MiniCategorySerializer(read_only=True)
+    discounted_price = serializers.FloatField(read_only=True)
+    discount_amount = serializers.FloatField(read_only=True)
 
     class Meta:
         model = Product
         fields = ['id', 'name_en', 'name_ru', 'name_uz', 'name_ko', 'description_en', 'description_ru',
-                  'description_uz', 'description_ko', 'category', 'price', 'quantity', 'worth', 'discount', 'views',
-                  'sold_count', 'images', 'average_rank', 'get_likes_count', 'is_available', 'modified_date',
-                  'created_date']
-        read_only_fields = ['views', 'is_available']
+                  'description_uz', 'description_ko', 'category', 'price', 'discount', 'discounted_price',
+                  'discount_amount', 'quantity', 'worth', 'views', 'sold_count', 'images', 'average_rank',
+                  'get_likes_count', 'is_available', 'modified_date', 'created_date']
+        read_only_fields = ['views', 'is_available', 'discounted_price', 'discount_amount']
 
 
 class ProductPostSerializer(serializers.ModelSerializer):

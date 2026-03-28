@@ -1,9 +1,7 @@
-from celery.utils.log import base_logger
 from django.db import models
 from django.db.models.signals import pre_save
 from random import randint
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.template.defaultfilters import title
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 
@@ -47,7 +45,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def clean(self):
         super().clean()
-        if User.objects.filter(phone=self.phone).exists():
+        qs = User.objects.filter(phone=self.phone)
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        if qs.exists():
             raise ValidationError({'phone': "Ushbu telefon raqami allaqachon ro‘yxatdan o‘tgan."})
 
     def __str__(self):
@@ -55,17 +56,53 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class UserLocation(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='location')
-    location = models.CharField(max_length=123, null=True, blank=True)
-    latitude = models.CharField(max_length=100, null=True, blank=True)
-    longitude = models.CharField(max_length=100, null=True, blank=True)
-    floor = models.CharField(max_length=123, null=True, blank=True)
-    apartment = models.CharField(max_length=123, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='locations')
+    location = models.CharField(max_length=255, null=True, blank=True, verbose_name="Manzil")
+    latitude = models.CharField(max_length=100, null=True, blank=True, verbose_name="Kenglik")
+    longitude = models.CharField(max_length=100, null=True, blank=True, verbose_name="Uzunlik")
+    floor = models.CharField(max_length=123, null=True, blank=True, verbose_name="Qavat")
+    apartment = models.CharField(max_length=123, null=True, blank=True, verbose_name="Xonadon")
     modified_date = models.DateTimeField(auto_now=True)
     created_date = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name = "Foydalanuvchi manzili"
+        verbose_name_plural = "Foydalanuvchi manzillari"
+        ordering = ['-created_date']
+
     def __str__(self):
         return f"Location of {self.user}: ({self.latitude}, {self.longitude}), ({self.floor}, {self.apartment})"
+
+    def clean(self):
+        """Koordinatalarni validatsiya qilish"""
+        super().clean()
+        if self.latitude:
+            try:
+                lat = float(self.latitude)
+                if not -90 <= lat <= 90:
+                    raise ValidationError({'latitude': "Kenglik -90 va 90 orasida bo'lishi kerak"})
+            except ValueError:
+                raise ValidationError({'latitude': "Kenglik son bo'lishi kerak"})
+
+        if self.longitude:
+            try:
+                lng = float(self.longitude)
+                if not -180 <= lng <= 180:
+                    raise ValidationError({'longitude': "Uzunlik -180 va 180 orasida bo'lishi kerak"})
+            except ValueError:
+                raise ValidationError({'longitude': "Uzunlik son bo'lishi kerak"})
+
+    @property
+    def has_coordinates(self):
+        """Koordinatalar mavjudligini tekshirish"""
+        return bool(self.latitude and self.longitude)
+
+    @property
+    def coordinates(self):
+        """Koordinatalarni tuple formatda qaytarish"""
+        if self.has_coordinates:
+            return (float(self.latitude), float(self.longitude))
+        return None
 
 
 class UserToken(models.Model):

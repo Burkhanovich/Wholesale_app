@@ -32,7 +32,9 @@ from .views import (
     AdviceViewSet,
     CallViewSet,
     BannerViewSet,
-    CartaViewSet, UserDeleteView
+    CartaViewSet,
+    UserDeleteView,
+    PasswordChangeView
 )
 
 router = DefaultRouter()
@@ -46,10 +48,10 @@ urlpatterns = [
     path('', include(router.urls)),
     path('profile/', UserProfileAPIView.as_view(), name='user-profile'),
     path('profile/delete/', UserDeleteView.as_view(), name='user-delete'),
+    path('profile/password/change/', PasswordChangeView.as_view(), name='password-change'),
     path('register/', UserRegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('superuser/create/', SuperUserCreateView.as_view(), name='superuser-create'),
     path('new-blocks/', NewBlockListCreateView.as_view(), name='new-block-list-create'),
     path('new-blocks/<int:pk>/', NewBlockDetailView.as_view(), name='new-block-detail'),
-
 ]

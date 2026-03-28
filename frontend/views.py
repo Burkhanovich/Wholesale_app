@@ -52,6 +52,20 @@ class BaseView(View):
 
         return context
 
+    def get_account_context(self, request):
+        """Account sahifalari uchun umumiy context (profil + sidebar)"""
+        context = self.get_common_context(request)
+        api = self.get_api_client(request)
+
+        # Profil ma'lumotlari (sidebar uchun)
+        profile_response = api.get_profile()
+        if not profile_response.get('error'):
+            context['profile'] = profile_response.get('data', {})
+        else:
+            context['profile'] = {}
+
+        return context
+
 
 class HomeView(BaseView):
     """Bosh sahifa"""
@@ -635,15 +649,13 @@ class ProfileView(BaseView):
             return redirect('frontend:login')
 
         api = self.get_api_client(request)
-        context = self.get_common_context(request)
+        context = self.get_account_context(request)
+        context['active_page'] = 'profile'
 
-        # Get profile
-        profile_response = api.get_profile()
-        if profile_response.get('error'):
+        # Profil ma'lumotlari allaqachon context'da
+        if not context.get('profile'):
             messages.error(request, 'Profil ma\'lumotlarini olishda xatolik')
             return redirect('frontend:home')
-
-        context['profile'] = profile_response.get('data', {})
 
         # Get locations
         locations_response = api.get_locations()
@@ -691,7 +703,8 @@ class OrdersView(BaseView):
             return redirect('frontend:login')
 
         api = self.get_api_client(request)
-        context = self.get_common_context(request)
+        context = self.get_account_context(request)
+        context['active_page'] = 'orders'
 
         page = int(request.GET.get('page', 1))
         limit = 10
@@ -736,7 +749,8 @@ class OrderDetailView(BaseView):
             return redirect('frontend:login')
 
         api = self.get_api_client(request)
-        context = self.get_common_context(request)
+        context = self.get_account_context(request)
+        context['active_page'] = 'orders'
 
         order_response = api.get_order(pk)
         if order_response.get('error'):
@@ -757,7 +771,8 @@ class WishlistView(BaseView):
             return redirect('frontend:login')
 
         api = self.get_api_client(request)
-        context = self.get_common_context(request)
+        context = self.get_account_context(request)
+        context['active_page'] = 'wishlist'
 
         wishlist_response = api.get_wishlist()
         if not wishlist_response.get('error'):
@@ -903,4 +918,84 @@ class CheckPromoView(BaseView):
             'error': False,
             'message': 'Promo kod qabul qilindi',
             'data': response.get('data')
+        })
+
+
+class ChangePasswordView(BaseView):
+    """Parolni o'zgartirish sahifasi"""
+    template_name = 'frontend/account/change_password.html'
+
+    def get(self, request):
+        if 'access_token' not in request.session:
+            return redirect('frontend:login')
+        context = self.get_account_context(request)
+        context['active_page'] = 'change_password'
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        if 'access_token' not in request.session:
+            return redirect('frontend:login')
+
+        api = self.get_api_client(request)
+        old_password = request.POST.get('old_password', '')
+        new_password = request.POST.get('new_password', '')
+        new_password_confirm = request.POST.get('new_password_confirm', '')
+
+        if not all([old_password, new_password, new_password_confirm]):
+            messages.error(request, 'Barcha maydonlarni to\'ldiring')
+            context = self.get_account_context(request)
+            context['active_page'] = 'change_password'
+            return render(request, self.template_name, context)
+
+        if new_password != new_password_confirm:
+            messages.error(request, 'Yangi parollar mos kelmadi')
+            context = self.get_account_context(request)
+            context['active_page'] = 'change_password'
+            return render(request, self.template_name, context)
+
+        if len(new_password) < 8:
+            messages.error(request, 'Parol kamida 8 ta belgidan iborat bo\'lishi kerak')
+            context = self.get_account_context(request)
+            context['active_page'] = 'change_password'
+            return render(request, self.template_name, context)
+
+        response = api.change_password(old_password, new_password, new_password_confirm)
+
+        if response.get('error'):
+            messages.error(request, response.get('message', 'Parolni o\'zgartirishda xatolik'))
+            context = self.get_account_context(request)
+            context['active_page'] = 'change_password'
+            return render(request, self.template_name, context)
+
+        messages.success(request, 'Parol muvaffaqiyatli o\'zgartirildi!')
+        return redirect('frontend:profile')
+
+
+class DeleteAccountView(BaseView):
+    """Hisobni o'chirish (AJAX)"""
+
+    def post(self, request):
+        if 'access_token' not in request.session:
+            return JsonResponse({'error': True, 'message': 'Tizimga kiring'}, status=401)
+
+        api = self.get_api_client(request)
+        password = request.POST.get('password', '')
+
+        if not password:
+            return JsonResponse({'error': True, 'message': 'Parolni kiriting'}, status=400)
+
+        response = api.delete_account(password)
+
+        if response.get('error'):
+            return JsonResponse({
+                'error': True,
+                'message': response.get('message', 'Parol noto\'g\'ri')
+            }, status=response.get('status_code', 400))
+
+        # Session'ni tozalash
+        request.session.flush()
+
+        return JsonResponse({
+            'error': False,
+            'message': 'Hisobingiz o\'chirildi'
         })
